@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import './widgets/chart.dart';
 import './widgets/transaction_list.dart';
@@ -123,13 +125,54 @@ class _MyHomeAppState extends State<MyHomeApp> {
 
     setState(() {
       _userTransactions.add(newTX);
+      saveTransactions();
     });
   }
 
   void _removeTransaction(String id) {
     setState(() {
       _userTransactions.removeWhere((tx) => tx.id == id);
+
+      clearData();
+      saveTransactions();
     });
+  }
+
+  //saves _userTransactions Every time when its modified and saves it in to sharedpreference
+  void saveTransactions() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> txList = [];
+
+    _userTransactions.forEach((element) {
+      txList.add(json.encode(element.toJson()));
+    });
+
+    await prefs.setStringList('transactions', txList);
+    print(prefs.getStringList('transactions'));
+  }
+
+  //get data from sharedpreference
+  void getData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      prefs.getStringList('transactions').forEach((element) {
+        _userTransactions.add(Transaction.fromJson(json.decode(element)));
+      });
+    });
+  }
+
+  //clear sharedpreference
+  void clearData() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    await pref.clear();
+  }
+
+  //get data from sharedpreference at start
+  @override
+  void initState() {
+    // clearData();
+    getData();
   }
 
   @override
